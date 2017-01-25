@@ -19,7 +19,13 @@ import com.androidplot.xy.XYGraphWidget;
 import com.androidplot.xy.XYPlot;
 import com.androidplot.xy.XYSeries;
 
+import java.lang.reflect.Array;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -51,50 +57,31 @@ public class PlottingThread {
         plotUpdater = new MyPlotUpdater(dynamicPlot);
 
         // only display whole numbers in domain labels
-        dynamicPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.BOTTOM).
-                getPaint().setColor(Color.TRANSPARENT);
+        //dynamicPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.BOTTOM).getPaint().setColor(Color.TRANSPARENT);
 
         // getInstance and position datasets:
         data = new SampleDynamicXYDatasource();
-        SampleDynamicSeries sine1Series = new SampleDynamicSeries(data, 0, "Ch. 1");
-        SampleDynamicSeries sine2Series = new SampleDynamicSeries(data, 1, "Ch. 2");
+        SampleDynamicSeries ch1Series = new SampleDynamicSeries(data, 0, "Ch. 1");
+        SampleDynamicSeries ch2Series = new SampleDynamicSeries(data, 1, "Ch. 2");
 
         LineAndPointFormatter formatter1 = new LineAndPointFormatter(
                 Color.rgb(0, 200, 0), null, null, null);
-        formatter1.getLinePaint().setStrokeJoin(Paint.Join.ROUND);
-        formatter1.getLinePaint().setStrokeWidth(10);
-        dynamicPlot.addSeries(sine1Series,
-                formatter1);
+        dynamicPlot.addSeries(ch1Series, formatter1);
 
         LineAndPointFormatter formatter2 =
                 new LineAndPointFormatter(Color.rgb(0, 0, 200), null, null, null);
-        formatter2.getLinePaint().setStrokeWidth(10);
-        formatter2.getLinePaint().setStrokeJoin(Paint.Join.ROUND);
 
         //formatter2.getFillPaint().setAlpha(220);
-        dynamicPlot.addSeries(sine2Series, formatter2);
+        dynamicPlot.addSeries(ch2Series, formatter2);
 
         // hook up the plotUpdater to the data model:
         data.addObserver(plotUpdater);
 
-        // thin out domain tick labels so they dont overlap each other:
-        //dynamicPlot.setDomainStepMode(StepMode.INCREMENT_BY_VAL);
-        //dynamicPlot.setDomainStepValue(5);
-
-        //dynamicPlot.setRangeStepMode(StepMode.INCREMENT_BY_VAL);
-        //dynamicPlot.setRangeStepValue(10);
-
-        dynamicPlot.getGraph().getLineLabelStyle(
-                XYGraphWidget.Edge.LEFT).setFormat(new DecimalFormat("###.#"));
-
         // uncomment this line to freeze the range boundaries:
         dynamicPlot.setRangeBoundaries(-350, 350, BoundaryMode.FIXED);
 
-        // create a dash effect for domain and range grid lines:
-        DashPathEffect dashFx = new DashPathEffect(
-                new float[] {PixelUtils.dpToPix(3), PixelUtils.dpToPix(3)}, 0);
-        dynamicPlot.getGraph().getDomainGridLinePaint().setPathEffect(dashFx);
-        dynamicPlot.getGraph().getRangeGridLinePaint().setPathEffect(dashFx);
+        // axes labels
+        dynamicPlot.setRangeLabel("Strain");
     }
 
     public void start() {
@@ -126,13 +113,23 @@ public class PlottingThread {
         public static final int CH1 = 0;
         public static final int CH2 = 1;
         private static final int SAMPLE_SIZE = 100;
+        private List<Short> ch1List = new LinkedList<Short>();
+        private List<Short> ch2List = new LinkedList<Short>();
         public short ch1 = 0;
         public short ch2 = 0;
+        private short zero = 0;
         private MyObservable notifier;
         private boolean keepRunning = false;
 
         {
             notifier = new MyObservable();
+        }
+
+        public SampleDynamicXYDatasource(){
+            for(int ii=0; ii<SAMPLE_SIZE; ii++){
+                ch1List.add(zero);
+                ch2List.add(zero);
+            }
         }
 
         public void stopThread() {
@@ -143,9 +140,13 @@ public class PlottingThread {
         public void run() {
             try {
                 keepRunning = true;
-                boolean isRising = true;
+                int counter = 0;
                 while (keepRunning) {
-                    Thread.sleep(40); // decrease or remove to speed up the refresh rate.
+                    ch1List.remove(0);
+                    ch2List.remove(0);
+                    ch1List.add(ch1);
+                    ch2List.add(ch2);
+                    Thread.sleep(10); // decrease or remove to speed up the refresh rate.
                     notifier.notifyObservers();
                 }
             } catch (InterruptedException e) {
@@ -170,9 +171,9 @@ public class PlottingThread {
             }
             switch (series) {
                 case CH1:
-                    return ch1;
+                    return ch1List.get(index);
                 case CH2:
-                    return ch2;
+                    return ch2List.get(index);
                 default:
                     throw new IllegalArgumentException();
             }
