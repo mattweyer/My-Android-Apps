@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:ap="http://schemas.android.com/apk/res-auto"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    tools:ignore="TextFields,HardcodedText" >
+
+    <TextView
+        android:id="@+id/label"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="Not Connected:"
+        android:layout_toLeftOf="@+id/fastestButton"
+        android:layout_toStartOf="@+id/fastestButton" />
+
+    <Button
+        android:id="@+id/open"
+        android:layout_width="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@id/label"
+        android:text="Open"
+        android:onClick="onOpenClick"
+        android:layout_height="40dp" />
+
+    <Button
+        android:id="@+id/close"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:text="Close"
+        android:layout_below="@id/label"
+        android:layout_toRightOf="@+id/open"
+        android:layout_toEndOf="@+id/open"
+        android:onClick="onCloseClick" />
+
+    <RadioButton
+        android:text="500 Hz"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_toRightOf="@+id/fastestButton"
+        android:layout_toEndOf="@+id/fastestButton"
+        android:id="@+id/slowButton"
+        android:checked="true"
+        android:onClick="sendData"
+        android:textSize="14sp" />
+
+    <RadioButton
+        android:text="2 kHz"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/fastestButton"
+        android:checked="false"
+        android:onClick="sendData"
+        android:layout_toRightOf="@+id/close"
+        android:textSize="14sp"
+        android:layout_alignParentTop="true" />
+
+    <RadioButton
+        android:text="250 Hz"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/slowestButton"
+        android:onClick="sendData"
+        android:textSize="14sp"
+        android:layout_alignBaseline="@+id/fastButton"
+        android:layout_alignBottom="@+id/fastButton"
+        android:layout_toRightOf="@+id/fastestButton"
+        android:layout_toEndOf="@+id/fastestButton" />
+
+    <Switch
+        android:layout_height="wrap_content"
+        android:id="@+id/switch1"
+        android:layout_width="wrap_content"
+        android:checked="true"
+        android:layout_below="@+id/open"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginLeft="17dp"
+        android:layout_marginStart="17dp"
+        android:layout_marginTop="17dp" />
+
+    <RadioButton
+        android:text="1 kHz"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/fastButton"
+        android:onClick="sendData"
+        android:textSize="14sp"
+        android:layout_alignBottom="@+id/close"
+        android:layout_toRightOf="@+id/close"
+        android:layout_toEndOf="@+id/close" />
+
+    <TextView
+        android:text="@string/record_button_on"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView"
+        android:layout_marginLeft="15dp"
+        android:layout_marginStart="15dp"
+        android:textSize="18sp"
+        android:layout_below="@+id/switch1"
+        android:layout_alignLeft="@+id/switch1"
+        android:layout_alignStart="@+id/switch1" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/textView"
+        android:layout_marginTop="22dp"
+        android:id="@+id/dataText"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true" />
+
+</RelativeLayout>
