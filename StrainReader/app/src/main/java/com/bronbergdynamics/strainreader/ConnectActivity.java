@@ -4,15 +4,14 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.view.View;
 import android.widget.RadioButton;
 import android.widget.TextView;
-import android.widget.Button;
+
+import com.androidplot.xy.XYPlot;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -35,8 +34,6 @@ public class ConnectActivity extends Activity
     Thread showDataThread;
     volatile boolean stopBlue;
     volatile boolean showData;
-    Handler timerHandler;
-    Runnable timerRunnable;
     // data buffer
     byte[] readBuffer;
     int readBufferPosition;
@@ -47,7 +44,6 @@ public class ConnectActivity extends Activity
     Number[] y2 = new Number[100];
     // buttons and labels etc
     TextView infoLabel;
-    TextView dataText;
     RadioButton fastestButton;
     RadioButton fastButton;
     RadioButton slowButton;
@@ -56,6 +52,9 @@ public class ConnectActivity extends Activity
     File dir;
     File file;
     FileOutputStream fileStream;
+    // plotting
+    XYPlot plot;
+    PlottingThread plottingThread;
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -69,14 +68,13 @@ public class ConnectActivity extends Activity
     private void init(){
         // UI stuff
         infoLabel = (TextView)findViewById(R.id.label);
-        dataText = (TextView)findViewById(R.id.dataText);
         fastestButton = (RadioButton)findViewById(R.id.fastestButton);
         fastButton = (RadioButton)findViewById(R.id.fastButton);
         slowButton = (RadioButton)findViewById(R.id.slowButton);
         slowestButton = (RadioButton)findViewById(R.id.slowestButton);
+        plot = (XYPlot)findViewById(R.id.dynamicXYPlot) ;
 
-        //threads
-        timerHandler = new Handler();
+        plottingThread = new PlottingThread(plot);
 
         try {
             dir = new File(Environment.getExternalStorageDirectory() + "/StrainData");
@@ -149,7 +147,7 @@ public class ConnectActivity extends Activity
         mmInputStream = mmSocket.getInputStream();
 
         beginListenForData();
-        showData();
+        plottingThread.start();
 
         infoLabel.setText("Bluetooth Opened");
     }
@@ -188,6 +186,7 @@ public class ConnectActivity extends Activity
                                     System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
                                     ch1 = (short) ((encodedBytes[encodedBytes.length - 8] & 0xff) | (encodedBytes[encodedBytes.length - 7] << 8));
                                     ch2 = (short) ((encodedBytes[encodedBytes.length - 4] & 0xff) | (encodedBytes[encodedBytes.length - 3] << 8));
+                                    plottingThread.setData(ch1, ch2);
                                     readBufferPosition = 0;
                                 }
                                 b_prev = b;
@@ -203,46 +202,6 @@ public class ConnectActivity extends Activity
         });
 
         bluetoothThread.start();
-    }
-
-    // this dumps data onto screen
-    private void showData()
-    {
-        showData = true;
-        //runs without a timer by reposting this handler at the end of the runnable
-        timerRunnable = new Runnable() {
-            @Override
-            public void run() {
-                final String data = Integer.toString(ch1) + " , " + Integer.toString(ch2) + "\n";
-                if (dataText.getLineCount() > 20) {
-                    String textArr[] = dataText.getText().toString().split("\n", 2);
-                    String text = textArr[1] + data;
-                    dataText.setText(text);
-                }
-                else dataText.append(data);
-                timerHandler.postDelayed(this, 50);
-            }
-        };
-
-        timerHandler.post(timerRunnable);
-    }
-
-    // define the onPause() function which just makes sure we kill the timerHandler thread when we start a new activity
-    @Override
-    protected void onPause() {
-        if (timerHandler != null) {
-            timerHandler.removeCallbacks(timerRunnable);
-            super.onPause();
-        }
-    }
-
-    // define the onResume() function which just makes sure we kill the timerHandler thread when we start a new activity
-    @Override
-    protected void onResume() {
-        if (timerHandler != null) {
-            timerHandler.post(timerRunnable);
-            super.onResume();
-        }
     }
 
     public void sendData(View view)
@@ -296,7 +255,7 @@ public class ConnectActivity extends Activity
         mmInputStream.close();
         mmSocket.close();
         fileStream.close();
-        timerHandler.removeCallbacks(timerRunnable);
+        plottingThread.stop();
         infoLabel.setText("Bluetooth Closed");
     }
 }
