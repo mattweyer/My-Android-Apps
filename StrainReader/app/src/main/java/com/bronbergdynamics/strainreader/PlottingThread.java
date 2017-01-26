@@ -109,7 +109,7 @@ public class PlottingThread {
 
         public static final int CH1 = 0;
         public static final int CH2 = 1;
-        private static final int SAMPLE_SIZE = 200;
+        private static final int SAMPLE_SIZE = 100;
         private List<Short> ch1List = new LinkedList<Short>();
         private List<Short> ch2List = new LinkedList<Short>();
         public short ch1 = 0;
@@ -143,7 +143,7 @@ public class PlottingThread {
                     ch2List.remove(0);
                     ch1List.add(ch1);
                     ch2List.add(ch2);
-                    Thread.sleep(10); // decrease or remove to speed up the refresh rate.
+                    Thread.sleep(20); // decrease or remove to speed up the refresh rate.
                     notifier.notifyObservers();
                 }
             } catch (InterruptedException e) {
