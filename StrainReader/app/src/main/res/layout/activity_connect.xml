@@ -70,9 +70,9 @@
 
     <Switch
         android:layout_height="wrap_content"
-        android:id="@+id/switch1"
+        android:id="@+id/recordSwitch"
         android:layout_width="wrap_content"
-        android:checked="true"
+        android:checked="false"
         android:layout_below="@+id/open"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
@@ -99,9 +99,9 @@
         android:layout_marginLeft="15dp"
         android:layout_marginStart="15dp"
         android:textSize="18sp"
-        android:layout_below="@+id/switch1"
-        android:layout_alignLeft="@+id/switch1"
-        android:layout_alignStart="@+id/switch1" />
+        android:layout_below="@+id/recordSwitch"
+        android:layout_alignLeft="@+id/recordSwitch"
+        android:layout_alignStart="@+id/recordSwitch" />
 
     <com.androidplot.xy.XYPlot
         style="@style/APDefacto.Light"

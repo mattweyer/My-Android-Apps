@@ -8,7 +8,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
+import android.widget.CompoundButton;
 import android.widget.RadioButton;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import com.androidplot.xy.XYPlot;
@@ -29,6 +31,7 @@ public class ConnectActivity extends Activity
     BluetoothDevice mmDevice;
     OutputStream mmOutputStream;
     InputStream mmInputStream;
+    UUID uuid;
     //threading
     Thread bluetoothThread;
     Thread showDataThread;
@@ -48,10 +51,12 @@ public class ConnectActivity extends Activity
     RadioButton fastButton;
     RadioButton slowButton;
     RadioButton slowestButton;
+    Switch recordSwitch;
     // streaming to file
     File dir;
     File file;
     FileOutputStream fileStream;
+    boolean recording = false;
     // plotting
     XYPlot plot;
     PlottingThread plottingThread;
@@ -72,18 +77,26 @@ public class ConnectActivity extends Activity
         fastButton = (RadioButton)findViewById(R.id.fastButton);
         slowButton = (RadioButton)findViewById(R.id.slowButton);
         slowestButton = (RadioButton)findViewById(R.id.slowestButton);
+        recordSwitch = (Switch)findViewById(R.id.recordSwitch);
         plot = (XYPlot)findViewById(R.id.dynamicXYPlot) ;
+
+        recordSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    startRecording();
+                } else {
+                    stopRecording();
+                }
+            }
+        });
 
         plottingThread = new PlottingThread(plot);
 
-        try {
-            dir = new File(Environment.getExternalStorageDirectory() + "/StrainData");
-            if(!dir.exists()) dir.mkdirs();
-            file = new File(dir, "log.bin");
-            fileStream = new FileOutputStream(file);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        dir = new File(Environment.getExternalStorageDirectory() + "/StrainData");
+        if(!dir.exists()) dir.mkdirs();
+        file = new File(dir, "log.bin");
+
+        uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); //Standard SerialPortService ID
     }
 
     public void onOpenClick(View view){
@@ -129,6 +142,20 @@ public class ConnectActivity extends Activity
                 if(device.getName().equals("Bluetooth2"))
                 {
                     mmDevice = device;
+                    try {
+                        mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
+                    }
+                    catch (IOException e)
+                    {
+                        // Unable to connect; close the socket and return.
+                        try {
+                            mmSocket.close();
+                        } catch (IOException closeException) {
+                            infoLabel.setText("Bluetooth Device Not Found. Could Not Close Socket!");
+                        }
+                        infoLabel.setText("Bluetooth Device Not Found");
+                        return false;
+                    }
                     infoLabel.setText("Bluetooth Device Found");
                     return true;
                 }
@@ -140,8 +167,6 @@ public class ConnectActivity extends Activity
 
     void openBT() throws IOException
     {
-        UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); //Standard SerialPortService ID
-        mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
         mmSocket.connect();
         mmOutputStream = mmSocket.getOutputStream();
         mmInputStream = mmSocket.getInputStream();
@@ -179,7 +204,7 @@ public class ConnectActivity extends Activity
                             mmInputStream.read(packetBytes);
                             for (int i = 0; i < bytesAvailable; i++) {
                                 b = packetBytes[i];
-                                fileStream.write(b);
+                                if(recording) fileStream.write(b);
                                 readBuffer[readBufferPosition++] = b;
                                 if (b == delimiter[1] && b_prev == delimiter[0]) {
                                     encodedBytes = new byte[10];
@@ -254,8 +279,22 @@ public class ConnectActivity extends Activity
         mmOutputStream.close();
         mmInputStream.close();
         mmSocket.close();
-        fileStream.close();
+        if(fileStream != null) fileStream.close();
         plottingThread.stop();
         infoLabel.setText("Bluetooth Closed");
+    }
+
+    public void stopRecording(){
+        recording = false;
+        try{ fileStream.close(); }
+        catch (IOException e) {}
+    }
+
+    public void startRecording(){
+        recording = true;
+        try{
+            fileStream = new FileOutputStream(file);
+        } catch (IOException e) {
+        }
     }
 }

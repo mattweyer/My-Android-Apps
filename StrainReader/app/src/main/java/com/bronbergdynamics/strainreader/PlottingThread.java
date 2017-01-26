@@ -56,9 +56,6 @@ public class PlottingThread {
 
         plotUpdater = new MyPlotUpdater(dynamicPlot);
 
-        // only display whole numbers in domain labels
-        //dynamicPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.BOTTOM).getPaint().setColor(Color.TRANSPARENT);
-
         // getInstance and position datasets:
         data = new SampleDynamicXYDatasource();
         SampleDynamicSeries ch1Series = new SampleDynamicSeries(data, 0, "Ch. 1");
@@ -78,7 +75,7 @@ public class PlottingThread {
         data.addObserver(plotUpdater);
 
         // uncomment this line to freeze the range boundaries:
-        dynamicPlot.setRangeBoundaries(-350, 350, BoundaryMode.FIXED);
+        //dynamicPlot.setRangeBoundaries(-350, 350, BoundaryMode.FIXED);
 
         // axes labels
         dynamicPlot.setRangeLabel("Strain");
@@ -112,7 +109,7 @@ public class PlottingThread {
 
         public static final int CH1 = 0;
         public static final int CH2 = 1;
-        private static final int SAMPLE_SIZE = 100;
+        private static final int SAMPLE_SIZE = 200;
         private List<Short> ch1List = new LinkedList<Short>();
         private List<Short> ch2List = new LinkedList<Short>();
         public short ch1 = 0;
