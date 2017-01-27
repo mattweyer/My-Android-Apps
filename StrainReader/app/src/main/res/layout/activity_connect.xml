@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    xmlns:ap="http://schemas.android.com/apk/res-auto"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     tools:ignore="TextFields,HardcodedText" >
@@ -91,32 +91,32 @@
         android:layout_toRightOf="@+id/close"
         android:layout_toEndOf="@+id/close" />
 
-    <TextView
-        android:text="@string/record_button_on"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/textView"
-        android:layout_marginLeft="15dp"
-        android:layout_marginStart="15dp"
-        android:textSize="18sp"
-        android:layout_below="@+id/recordSwitch"
-        android:layout_alignLeft="@+id/recordSwitch"
-        android:layout_alignStart="@+id/recordSwitch" />
-
     <com.androidplot.xy.XYPlot
         style="@style/APDefacto.Light"
         android:id="@+id/dynamicXYPlot"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/textView"
-        ap:renderMode="use_background_thread"
-        ap:title="A Dynamic XY Plot"
-        ap:domainTitle="Domain"
-        ap:rangeTitle="Range"
-        ap:legendTextSize="15sp"
-        ap:legendIconHeight="15dp"
-        ap:legendIconWidth="15dp"
-        ap:legendHeight="25dp"
-        ap:legendAnchor="right_bottom"/>
+        android:layout_below="@+id/recordSwitch"
+        app:renderMode="use_background_thread"
+        app:title="A Dynamic XY Plot"
+        app:domainTitle="Domain"
+        app:rangeTitle="Range"
+        app:legendTextSize="15sp"
+        app:legendIconHeight="15dp"
+        app:legendIconWidth="15dp"
+        app:legendHeight="25dp"
+        app:legendAnchor="right_bottom"/>
+
+    <TextView
+        android:text="@string/record_button_on"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView"
+        android:textSize="22sp"
+        android:layout_marginLeft="12dp"
+        android:layout_marginStart="12dp"
+        android:layout_above="@+id/dynamicXYPlot"
+        android:layout_toRightOf="@+id/recordSwitch"
+        android:layout_toEndOf="@+id/recordSwitch" />
 
 </RelativeLayout>

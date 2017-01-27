@@ -7,7 +7,10 @@ import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.v7.app.AppCompatActivity;
+import android.view.Menu;
 import android.view.View;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.RadioButton;
 import android.widget.Switch;
@@ -23,7 +26,7 @@ import java.io.OutputStream;
 import java.util.Set;
 import java.util.UUID;
 
-public class ConnectActivity extends Activity
+public class ConnectActivity extends AppCompatActivity
 {
     // bluetooth
     BluetoothAdapter mBluetoothAdapter;
@@ -47,6 +50,8 @@ public class ConnectActivity extends Activity
     Number[] y2 = new Number[100];
     // buttons and labels etc
     TextView infoLabel;
+    Button openButton;
+    Button closeButton;
     RadioButton fastestButton;
     RadioButton fastButton;
     RadioButton slowButton;
@@ -70,9 +75,18 @@ public class ConnectActivity extends Activity
         init();
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_connect, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
     private void init(){
         // UI stuff
         infoLabel = (TextView)findViewById(R.id.label);
+        openButton = (Button)findViewById(R.id.open);
+        closeButton = (Button)findViewById(R.id.close);
+        closeButton.setEnabled(false);
         fastestButton = (RadioButton)findViewById(R.id.fastestButton);
         fastButton = (RadioButton)findViewById(R.id.fastButton);
         slowButton = (RadioButton)findViewById(R.id.slowButton);
@@ -107,6 +121,8 @@ public class ConnectActivity extends Activity
             }
             catch (IOException e){}
         }
+        openButton.setEnabled(false);
+        closeButton.setEnabled(true);
     }
 
     public void onCloseClick(View v)
@@ -116,6 +132,8 @@ public class ConnectActivity extends Activity
             closeBT();
         }
         catch (IOException ex){}
+        closeButton.setEnabled(false);
+        openButton.setEnabled(true);
     }
 
     private boolean findBT()

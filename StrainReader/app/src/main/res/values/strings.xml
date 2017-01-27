@@ -1,12 +1,16 @@
 <resources>
     <string name="app_name">Strain Reader</string>
+
     <string name="edit_com_port">Enter COM Port Number</string>
     <string name="connect_button">Connect</string>
     <string name="edit_log_file">Enter a file name</string>
     <string name="log_button">Start Log</string>
+    <string name="record_button_on">RECORD</string>
+    <string name="record_button_off">RECORD</string>
+
     <string name="y_axis">Strain</string>
     <string name="x_axis">Time</string>
     <string name="plot_title">Bluetooth Strain</string>
-    <string name="record_button_on">RECORD</string>
-    <string name="record_button_off">RECORD</string>
+
+    <string name="settings">Settings</string>
 </resources>
