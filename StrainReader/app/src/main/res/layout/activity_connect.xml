@@ -15,23 +15,23 @@
         android:layout_toStartOf="@+id/fastestButton" />
 
     <Button
-        android:id="@+id/open"
+        android:id="@+id/find"
         android:layout_width="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_below="@id/label"
-        android:text="Open"
-        android:onClick="onOpenClick"
-        android:layout_height="40dp" />
+        android:text="Find"
+        android:layout_height="40dp"
+        android:onClick="findDevice" />
 
     <Button
-        android:id="@+id/close"
+        android:id="@+id/connectButton"
         android:layout_width="wrap_content"
         android:layout_height="40dp"
-        android:text="Close"
+        android:text="Connect"
         android:layout_below="@id/label"
-        android:layout_toRightOf="@+id/open"
-        android:layout_toEndOf="@+id/open"
-        android:onClick="onCloseClick" />
+        android:layout_toRightOf="@+id/find"
+        android:layout_toEndOf="@+id/find"
+        android:onClick="connectDevice" />
 
     <RadioButton
         android:text="500 Hz"
@@ -52,7 +52,7 @@
         android:id="@+id/fastestButton"
         android:checked="false"
         android:onClick="sendData"
-        android:layout_toRightOf="@+id/close"
+        android:layout_toRightOf="@+id/connectButton"
         android:textSize="14sp"
         android:layout_alignParentTop="true" />
 
@@ -73,7 +73,7 @@
         android:id="@+id/recordSwitch"
         android:layout_width="wrap_content"
         android:checked="false"
-        android:layout_below="@+id/open"
+        android:layout_below="@+id/find"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_marginLeft="17dp"
@@ -87,9 +87,9 @@
         android:id="@+id/fastButton"
         android:onClick="sendData"
         android:textSize="14sp"
-        android:layout_alignBottom="@+id/close"
-        android:layout_toRightOf="@+id/close"
-        android:layout_toEndOf="@+id/close" />
+        android:layout_alignBottom="@+id/connectButton"
+        android:layout_toRightOf="@+id/connectButton"
+        android:layout_toEndOf="@+id/connectButton" />
 
     <com.androidplot.xy.XYPlot
         style="@style/APDefacto.Light"
@@ -118,5 +118,27 @@
         android:layout_above="@+id/dynamicXYPlot"
         android:layout_toRightOf="@+id/recordSwitch"
         android:layout_toEndOf="@+id/recordSwitch" />
+
+    <Button
+        android:text="Show"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_below="@+id/slowestButton"
+        android:layout_toRightOf="@+id/connectButton"
+        android:layout_toEndOf="@+id/connectButton"
+        android:id="@+id/showButton"
+        android:onClick="listenForData" />
+
+    <Button
+        android:text="Close"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_below="@+id/slowestButton"
+        android:layout_toRightOf="@+id/showButton"
+        android:layout_toEndOf="@+id/showButton"
+        android:layout_marginLeft="11dp"
+        android:layout_marginStart="11dp"
+        android:id="@+id/closeButton"
+        android:onClick="closeConnection" />
 
 </RelativeLayout>

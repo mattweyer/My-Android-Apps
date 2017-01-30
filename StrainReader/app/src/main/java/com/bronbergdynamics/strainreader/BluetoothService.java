@@ -10,7 +10,6 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.widget.Toast;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,16 +20,8 @@ import java.util.UUID;
 public class BluetoothService extends Service {
     // Binder given to clients
     private final IBinder mBinder = new LocalBinder();
-    /**
-     * Class used for the client Binder.  Because we know this service always
-     * runs in the same process as its clients, we don't need to deal with IPC.
-     */
-    public class LocalBinder extends Binder {
-        BluetoothService getService() {
-            // Return this instance of LocalService so clients can call public methods
-            return BluetoothService.this;
-        }
-    }
+
+    // bluetooth components
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothDevice mmDevice;
     private BluetoothSocket mmSocket;
@@ -40,40 +31,67 @@ public class BluetoothService extends Service {
     private InputStream mmInputStream;
     private UUID uuid;
     private String DeviceName = "Bluetooth2";
+
+    // not sure if this is needed but used to identify instance of the service
     private int service_id;
+
+    // an output steam to write to file
     private FileOutputStream fileStream;
 
+    // current values for channels 1 & 2 read from bluetooth device
+    private short ch1;
+    private short ch2;
+
+    // logicals to determine whether to listen for data or whether to record data
+    private boolean runBlue = false;
+    private boolean recording = false;
+
+    // the activity from which the service is started
     private Activity connectActivity;
 
-    public BluetoothService(Activity bindingActivity, FileOutputStream fileStream) {
-        connectActivity = bindingActivity;
-        this.fileStream = fileStream;
-    }
 
     @Override
     public IBinder onBind(Intent intent) {
+        Toast.makeText(this, "Bluetooth Service Started", Toast.LENGTH_SHORT).show();
         // return the binder for clients containing current service instance
         return mBinder;
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        Toast.makeText(this, "Bluetooth Service Started", Toast.LENGTH_LONG);
-        service_id = startId;
-        return super.onStartCommand(intent, flags, startId);
-    }
-
-    @Override
     public void onDestroy() {
-        listener.stop();
+        if (runBlue) {
+            try {
+                mmOutputStream.close();
+                mmInputStream.close();
+                mmSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            listener.stop();
+        }
+        Toast.makeText(this, "Bluetooth Service Stopped", Toast.LENGTH_SHORT).show();
         super.onDestroy();
     }
 
-    private boolean findDevice() {
+    /**
+     * Constructor which sets the activity to the activity as well as the file stream
+     * @param bindingActivity
+     * @param fileStream
+     */
+    public void init(Activity bindingActivity) {
+        connectActivity = bindingActivity;
+        uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); //Standard SerialPortService ID
+    }
+
+    /**
+     * Find the device and return true/false based on whether the device is found
+     * @return
+     */
+    public boolean findDevice() {
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(mBluetoothAdapter == null)
         {
-            Toast.makeText(this, "No Bluetooth Adapter Available", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "No Bluetooth Adapter Available", Toast.LENGTH_SHORT).show();
             return false;
         }
 
@@ -92,61 +110,122 @@ public class BluetoothService extends Service {
                 if(device.getName().equals(DeviceName))
                 {
                     mmDevice = device;
-                    try {
-                        mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
-                    }
-                    catch (IOException e)
-                    {
-                        // Unable to connect; close the socket and return.
-                        try {
-                            mmSocket.close();
-                        } catch (IOException closeException) {
-                            Toast.makeText(this, "Could Not Close Socket!", Toast.LENGTH_LONG).show();
-                        }
-                        Toast.makeText(this, "Bluetooth Device Not Found", Toast.LENGTH_LONG).show();
-                        return false;
-                    }
-                    Toast.makeText(this, "Bluetooth Device Found", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Bluetooth Device Found", Toast.LENGTH_SHORT).show();
                     return true;
                 }
             }
         }
-        Toast.makeText(this, "Bluetooth Device Not Found", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "Bluetooth Device Not Found", Toast.LENGTH_SHORT).show();
         return false;
     }
 
+    /**
+     * Connect to bluetooth device
+     */
     public void connectDevice() {
         try {
+            mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
             mmSocket.connect();
             mmOutputStream = mmSocket.getOutputStream();
             mmInputStream = mmSocket.getInputStream();
+            Toast.makeText(this, "Bluetooth Device Connected", Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            // Unable to connect; close the socket and return.
+            Toast.makeText(this, "Could Not Connect!", Toast.LENGTH_SHORT).show();
+            try {
+                mmSocket.close();
+            } catch (IOException closeException) {
+                Toast.makeText(this, "Could Not Close Socket!", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    public void disconnectDevice() {
+        try {
+            mmOutputStream.close();
+            mmInputStream.close();
+            mmSocket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Toast.makeText(this, "Bluetooth Opened", Toast.LENGTH_LONG).show();
     }
 
-    public void streamData() {
-        listener = new BluetoothRunnable(service_id, fileStream);
+    /**
+     * Start listening for incoming messages
+     */
+    public void startListening() {
+        listener = new BluetoothRunnable(service_id);
         bluetoothThread = new Thread(listener);
         bluetoothThread.start();
     }
 
+    /**
+     * Stop listening for incoming messages
+     */
+    public void stopListening() {
+        disconnectDevice();
+        listener.stop();
+    }
+
+    /**
+     * Send a message to the bluetooth device
+     * @param msg
+     */
+    public void sendData(byte[] msg) {
+        try {
+            mmOutputStream.write(msg);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Return the current values for each strain channel
+     * @return
+     */
+    public short[] getStrain() {
+        short strainArray[] = {ch1, ch2};
+        return strainArray;
+    }
+    /**
+     * Method to set the name of the device the app should look for
+     * @param DeviceName
+     */
+    public void setDeviceName(String DeviceName) {
+        this.DeviceName = DeviceName;
+    }
+
+    /**
+     * Method to turn recording on or off
+     * @param onOff
+     */
+    public void setRecording(boolean onOff) {
+        recording = onOff;
+    }
+
+    /**
+     * Class used for the client Binder.  Because we know this service always
+     * runs in the same process as its clients, we don't need to deal with IPC.
+     */
+    public class LocalBinder extends Binder {
+        BluetoothService getService() {
+            // Return this instance of LocalService so clients can call public methods
+            return BluetoothService.this;
+        }
+    }
+
+    /**
+     * Class used to listen for bluetooth messages in a separate thread
+     */
     final class BluetoothRunnable implements Runnable {
         final byte[] delimiter = {13, 10}; //This is the ASCII code for a newline character
-
-        private boolean runBlue = false;
-        private boolean recording = false;
         private int readBufferPosition = 0;
         private byte readBuffer[] = new byte[1024];
-        private short ch1;
-        private short ch2;
-        private FileOutputStream fileStream;
 
         private int service_id;
-        BluetoothRunnable(int service_id, FileOutputStream fileStream)
+        BluetoothRunnable(int service_id)
         {
-            this.fileStream = fileStream;
             this.service_id = service_id;
         }
 
@@ -155,6 +234,8 @@ public class BluetoothService extends Service {
             byte[] encodedBytes;
             byte b = 0; // used for reading in each byte in receive buffer
             byte b_prev = 0; // used for storing the previous byte read
+
+            runBlue = true;
 
             while(!Thread.currentThread().isInterrupted() && runBlue)
             {

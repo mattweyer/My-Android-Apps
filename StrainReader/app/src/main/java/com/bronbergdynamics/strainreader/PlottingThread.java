@@ -137,7 +137,6 @@ public class PlottingThread {
         public void run() {
             try {
                 keepRunning = true;
-                int counter = 0;
                 while (keepRunning) {
                     ch1List.remove(0);
                     ch2List.remove(0);

@@ -1,12 +1,12 @@
 package com.bronbergdynamics.strainreader;
 
-import android.app.Activity;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.View;
@@ -21,36 +21,18 @@ import com.androidplot.xy.XYPlot;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Set;
-import java.util.UUID;
 
 public class ConnectActivity extends AppCompatActivity
 {
-    // bluetooth
-    BluetoothAdapter mBluetoothAdapter;
-    BluetoothSocket mmSocket;
-    BluetoothDevice mmDevice;
-    OutputStream mmOutputStream;
-    InputStream mmInputStream;
-    UUID uuid;
     //threading
     Thread bluetoothThread;
     Thread showDataThread;
-    volatile boolean stopBlue;
-    volatile boolean showData;
-    // data buffer
-    byte[] readBuffer;
-    int readBufferPosition;
     short ch1, ch2; // the strain values on each channel
-    // plotting variables
-    Number[] x = new Number[100];
-    Number[] y1 = new Number[100];
-    Number[] y2 = new Number[100];
     // buttons and labels etc
     TextView infoLabel;
-    Button openButton;
+    Button findButton;
+    Button connectButton;
+    Button showButton;
     Button closeButton;
     RadioButton fastestButton;
     RadioButton fastButton;
@@ -61,10 +43,13 @@ public class ConnectActivity extends AppCompatActivity
     File dir;
     File file;
     FileOutputStream fileStream;
-    boolean recording = false;
     // plotting
     XYPlot plot;
     PlottingThread plottingThread;
+    //bluetooth
+    BluetoothService mBluetoothService;
+    boolean mBound = false;
+    boolean showData = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -81,11 +66,44 @@ public class ConnectActivity extends AppCompatActivity
         return super.onCreateOptionsMenu(menu);
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // bind to bluetooth service
+        Intent intent = new Intent(this, BluetoothService.class);
+        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // Unbind from the service
+        if (mBound) {
+            unbindService(mConnection);
+            mBound = false;
+        }
+        // close the file stream
+        if(fileStream != null) {
+            try {
+                fileStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Just all the stuff to do when the activity is created
+     */
     private void init(){
         // UI stuff
         infoLabel = (TextView)findViewById(R.id.label);
-        openButton = (Button)findViewById(R.id.open);
-        closeButton = (Button)findViewById(R.id.close);
+        findButton = (Button)findViewById(R.id.find);
+        connectButton = (Button)findViewById(R.id.connectButton);
+        connectButton.setEnabled(false);
+        showButton = (Button)findViewById(R.id.showButton);
+        showButton.setEnabled(false);
+        closeButton = (Button)findViewById(R.id.closeButton);
         closeButton.setEnabled(false);
         fastestButton = (RadioButton)findViewById(R.id.fastestButton);
         fastButton = (RadioButton)findViewById(R.id.fastButton);
@@ -109,146 +127,13 @@ public class ConnectActivity extends AppCompatActivity
         dir = new File(Environment.getExternalStorageDirectory() + "/StrainData");
         if(!dir.exists()) dir.mkdirs();
         file = new File(dir, "log.bin");
-
-        uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); //Standard SerialPortService ID
     }
 
-    public void onOpenClick(View view){
-        boolean btFound = findBT();
-        if(btFound) {
-            try {
-                openBT();
-            }
-            catch (IOException e){}
-        }
-        openButton.setEnabled(false);
-        closeButton.setEnabled(true);
-    }
-
-    public void onCloseClick(View v)
-    {
-        try
-        {
-            closeBT();
-        }
-        catch (IOException ex){}
-        closeButton.setEnabled(false);
-        openButton.setEnabled(true);
-    }
-
-    private boolean findBT()
-    {
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if(mBluetoothAdapter == null)
-        {
-            infoLabel.setText("No bluetooth adapter available");
-            return false;
-        }
-
-        if(!mBluetoothAdapter.isEnabled())
-        {
-            Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBluetooth, 0);
-            return false;
-        }
-
-        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
-        if(pairedDevices.size() > 0)
-        {
-            for(BluetoothDevice device : pairedDevices)
-            {
-                if(device.getName().equals("Bluetooth2"))
-                {
-                    mmDevice = device;
-                    try {
-                        mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
-                    }
-                    catch (IOException e)
-                    {
-                        // Unable to connect; close the socket and return.
-                        try {
-                            mmSocket.close();
-                        } catch (IOException closeException) {
-                            infoLabel.setText("Bluetooth Device Not Found. Could Not Close Socket!");
-                        }
-                        infoLabel.setText("Bluetooth Device Not Found");
-                        return false;
-                    }
-                    infoLabel.setText("Bluetooth Device Found");
-                    return true;
-                }
-            }
-        }
-        infoLabel.setText("Bluetooth Device Not Found");
-        return false;
-    }
-
-    void openBT() throws IOException
-    {
-        mmSocket.connect();
-        mmOutputStream = mmSocket.getOutputStream();
-        mmInputStream = mmSocket.getInputStream();
-
-        beginListenForData();
-        plottingThread.start();
-
-        infoLabel.setText("Bluetooth Opened");
-    }
-
-    void beginListenForData()
-    {
-        final byte[] delimiter = {13, 10}; //This is the ASCII code for a newline character
-
-        stopBlue = false;
-        readBufferPosition = 0;
-        readBuffer = new byte[1024];
-
-        bluetoothThread = new Thread(new Runnable()
-
-        {
-            public void run()
-            {
-                byte[] encodedBytes;
-                byte b = 0; // used for reading in each byte in receive buffer
-                byte b_prev = 0; // used for storing the previous byte read
-
-                while(!Thread.currentThread().isInterrupted() && !stopBlue)
-                {
-                    try
-                    {
-                        int bytesAvailable = mmInputStream.available();
-                        if(bytesAvailable > 0) {
-                            byte[] packetBytes = new byte[bytesAvailable];
-                            mmInputStream.read(packetBytes);
-                            for (int i = 0; i < bytesAvailable; i++) {
-                                b = packetBytes[i];
-                                if(recording) fileStream.write(b);
-                                readBuffer[readBufferPosition++] = b;
-                                if (b == delimiter[1] && b_prev == delimiter[0]) {
-                                    encodedBytes = new byte[10];
-                                    System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
-                                    ch1 = (short) ((encodedBytes[encodedBytes.length - 8] & 0xff) | (encodedBytes[encodedBytes.length - 7] << 8));
-                                    ch2 = (short) ((encodedBytes[encodedBytes.length - 4] & 0xff) | (encodedBytes[encodedBytes.length - 3] << 8));
-                                    plottingThread.setData(ch1, ch2);
-                                    readBufferPosition = 0;
-                                }
-                                b_prev = b;
-                            }
-                        }
-                    }
-                    catch (IOException ex)
-                    {
-                        stopBlue = true;
-                    }
-                }
-            }
-        });
-
-        bluetoothThread.start();
-    }
-
-    public void sendData(View view)
-    {
+    /**
+     * Send off a message based on which button is pressed
+     * @param view
+     */
+    public void sendData(View view) {
         byte[] msg = {0, 0};
         switch(view.getId())
         {
@@ -283,36 +168,98 @@ public class ConnectActivity extends AppCompatActivity
             default:
                 break;
         }
-        try {
-            mmOutputStream.write(msg);
-        }
-        catch (IOException ex){}
         infoLabel.setText("Data Sent");
     }
 
-    void closeBT() throws IOException
-    {
-        stopBlue = true;
-        showData = false;
-        mmOutputStream.close();
-        mmInputStream.close();
-        mmSocket.close();
-        if(fileStream != null) fileStream.close();
-        plottingThread.stop();
+    public void findDevice(View view) {
+        boolean isConnected = mBluetoothService.findDevice();
+        if(isConnected) infoLabel.setText("Device found");
+        findButton.setEnabled(false);
+        connectButton.setEnabled(true);
+    }
+
+    public void connectDevice(View view) {
+        mBluetoothService.connectDevice();
+        infoLabel.setText("Device connected");
+        connectButton.setEnabled(false);
+        showButton.setEnabled(true);
+        closeButton.setEnabled(true);
+    }
+
+    public void listenForData(View view) {
+        mBluetoothService.startListening();
+        showButton.setEnabled(false);
+        showDataThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                showData = true;
+                while(showData) {
+                    short strainArray[] = mBluetoothService.getStrain();
+                    ch1 = strainArray[0];
+                    ch2 = strainArray[1];
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            infoLabel.setText(ch1 + " , " + ch2);
+                        }
+                    });
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        showDataThread.start();
+    }
+
+    public void closeConnection(View view) {
+        // if we are listening for data stop listening and disconnect, otherwise just disconnect
+        if(showData) {
+            showData = false;
+            mBluetoothService.stopListening();
+        }
+        else mBluetoothService.disconnectDevice();
+        //plottingThread.stop();
         infoLabel.setText("Bluetooth Closed");
+        closeButton.setEnabled(false);
+        showButton.setEnabled(false);
+        connectButton.setEnabled(true);
     }
 
     public void stopRecording(){
-        recording = false;
-        try{ fileStream.close(); }
-        catch (IOException e) {}
+        //try{ fileStream.close(); }
+        //catch (IOException e) {}
     }
 
     public void startRecording(){
-        recording = true;
-        try{
-            fileStream = new FileOutputStream(file);
-        } catch (IOException e) {
-        }
+        //recording = true;
+        //try{
+        //    fileStream = new FileOutputStream(file);
+        //} catch (IOException e) {
+        //}
     }
+
+    /**
+     * Defines callbacks for service binding, passed to bindService()
+     */
+    private ServiceConnection mConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className, IBinder service) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance
+            BluetoothService.LocalBinder binder = (BluetoothService.LocalBinder) service;
+            mBluetoothService = binder.getService();
+            mBound = true;
+            // initialise bluetooth service
+            mBluetoothService.init(ConnectActivity.this);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            mBound = false;
+        }
+    };
+
 }
