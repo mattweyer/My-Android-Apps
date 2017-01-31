@@ -13,4 +13,6 @@
     <string name="settings">Settings</string>
     <string name="change_freq">Change Frequency</string>
     <string name="recording">Record Data</string>
+    <string name="set_filename">Set File Name</string>
+    <string name="exit">Exit</string>
 </resources>

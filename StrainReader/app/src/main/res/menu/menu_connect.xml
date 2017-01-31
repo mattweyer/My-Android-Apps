@@ -19,6 +19,10 @@
             <item android:id="@+id/record"
                 android:title="@string/recording"
                 android:checkable="true" />
+            <item android:id="@+id/set_filename"
+                android:title="@string/set_filename"/>
+            <item android:id="@+id/exit"
+                android:title="@string/exit"/>
         </menu>
     </item>
 </menu>

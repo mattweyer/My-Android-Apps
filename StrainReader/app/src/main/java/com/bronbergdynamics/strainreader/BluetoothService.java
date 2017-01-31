@@ -44,7 +44,7 @@ public class BluetoothService extends Service {
     private short ch1;
     private short ch2;
 
-    // logicals to determine whether to listen for data or whether to recordMenuItem data
+    // logicals to determine whether to listen for data or whether to fileMenuItem data
     private boolean runBlue = false;
     private boolean recording = false;
 
@@ -60,6 +60,11 @@ public class BluetoothService extends Service {
     }
 
     @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return super.onStartCommand(intent, flags, startId);
+    }
+
+    @Override
     public void onDestroy() {
         if (runBlue) {
             try {
@@ -71,6 +76,7 @@ public class BluetoothService extends Service {
             }
             listener.stop();
         }
+        stopSelf();
         Toast.makeText(this, "Bluetooth Service Stopped", Toast.LENGTH_SHORT).show();
         super.onDestroy();
     }

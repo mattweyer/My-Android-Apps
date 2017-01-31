@@ -11,11 +11,13 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.text.InputType;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ArrayAdapter;
+import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,7 +26,6 @@ import com.androidplot.xy.XYPlot;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ConnectActivity extends AppCompatActivity {
@@ -41,6 +42,7 @@ public class ConnectActivity extends AppCompatActivity {
     // menu items
     MenuItem plotMenuItem;
     MenuItem freqMenuItem;
+    MenuItem fileMenuItem;
     // streaming to file
     File dir;
     File file;
@@ -52,10 +54,12 @@ public class ConnectActivity extends AppCompatActivity {
     boolean mBound = false;
     boolean isListening = false;
     boolean isConnected = false;
+    boolean isRecording = false;
     // alert dialog box stuff
     private int frequencyIndex = 2;
     private int deviceIndex = 0;
     private byte msg[];
+    private String filename = "log.bin";
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -73,6 +77,7 @@ public class ConnectActivity extends AppCompatActivity {
         plotMenuItem.getIcon().setAlpha(75);
         freqMenuItem = menu.findItem(R.id.changeFrequency);
         freqMenuItem.setEnabled(false);
+        fileMenuItem = menu.findItem(R.id.set_filename);
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -90,10 +95,23 @@ public class ConnectActivity extends AppCompatActivity {
                 break;
             case R.id.record:
                 boolean isChecked = item.isChecked();
-                if (isChecked) stopRecording();
-                else startRecording();
+                if (isChecked) {
+                    stopRecording();
+                    fileMenuItem.setEnabled(true);
+                }
+                else {
+                    startRecording();
+                    fileMenuItem.setEnabled(false);
+                }
                 item.setChecked(!isChecked);
                 break;
+            case R.id.set_filename:
+                filenameDialog();
+                break;
+            case R.id.exit:
+                Intent intent = new Intent(this, BluetoothService.class);
+                stopService(intent);
+                finish();
             default:
                 break;
         }
@@ -106,6 +124,7 @@ public class ConnectActivity extends AppCompatActivity {
         // bind to bluetooth service
         Intent intent = new Intent(this, BluetoothService.class);
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+        startService(intent);
     }
 
     @Override
@@ -120,6 +139,18 @@ public class ConnectActivity extends AppCompatActivity {
         if(fileStream != null) {
             stopRecording();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Intent intent = new Intent(this, BluetoothService.class);
+        stopService(intent);
+    }
+
+    @Override
+    public void onBackPressed() {
+        exitDialog();
     }
 
     /**
@@ -141,7 +172,6 @@ public class ConnectActivity extends AppCompatActivity {
         // get the file directory, and make it if it doesn't exist
         dir = new File(Environment.getExternalStorageDirectory() + "/StrainData");
         if(!dir.exists()) dir.mkdirs();
-        file = new File(dir, "log.bin");
     }
 
     /**
@@ -241,13 +271,15 @@ public class ConnectActivity extends AppCompatActivity {
      * Start logging to file
      */
     public void startRecording(){
+        file = new File(dir, filename);
         try{
             fileStream = new FileOutputStream(file);
+            mBluetoothService.setFileStream(fileStream);
+            mBluetoothService.setRecording(true);
+            isRecording = true;
         } catch (IOException e) {
             e.printStackTrace();
         }
-        mBluetoothService.setFileStream(fileStream);
-        mBluetoothService.setRecording(true);
     }
 
     /**
@@ -255,36 +287,12 @@ public class ConnectActivity extends AppCompatActivity {
      */
     public void stopRecording(){
         mBluetoothService.setRecording(false);
+        isRecording = false;
         try{
             fileStream.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    /**
-     * Required for the alert dialog to choose which option was selected
-     * @param index
-     */
-    private void setIndex(int index, String what) {
-        switch (what) {
-            case "device":
-                deviceIndex = index;
-                break;
-            case "frequency":
-                frequencyIndex = index;
-                break;
-            default:
-                break;
-        }
-    }
-
-    /**
-     * Required for the alert dialog to set the msg to send to the boards
-     * @param msg
-     */
-    private void setMsg(byte[] msg) {
-        this.msg = msg;
     }
 
     /**
@@ -300,8 +308,7 @@ public class ConnectActivity extends AppCompatActivity {
         builder.setSingleChoiceItems(labels, -1, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-
-                setIndex(which, "device");
+                deviceIndex = which;
             }
         });
 
@@ -338,11 +345,9 @@ public class ConnectActivity extends AppCompatActivity {
         builder.setSingleChoiceItems(labels, index, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                byte[] msg = {0, 0};  // the message to be sent to the board
                 msg[0] = 102;
-                setIndex(which, "frequency");
+                frequencyIndex = which;
                 msg[1] = (byte)(which + 1);
-                setMsg(msg);
             }
         });
 
@@ -380,6 +385,57 @@ public class ConnectActivity extends AppCompatActivity {
         dialog.show();
 
         return index;
+    }
+
+    /**
+     * A dialog to change the filename for recording data
+     */
+    private void filenameDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Title");
+        // Set up the input
+        final EditText input = new EditText(this);
+        // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.setText(filename);
+        input.setSelection(0, filename.length()-4);
+        builder.setView(input);
+
+        // Set up the buttons
+        builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+                filename = input.getText().toString();
+            }
+        });
+        builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+        dialog.show();
+    }
+
+    public void exitDialog() {
+        new AlertDialog.Builder(this)
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .setTitle("Exiting App")
+                .setMessage("Are you sure you want to exit the app? Bluetooth connection will be lost.")
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener()
+                {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        finish();
+                    }
+
+                })
+                .setNegativeButton("No", null)
+                .show();
     }
 
     /**
