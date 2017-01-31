@@ -14,6 +14,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -42,7 +44,7 @@ public class BluetoothService extends Service {
     private short ch1;
     private short ch2;
 
-    // logicals to determine whether to listen for data or whether to record data
+    // logicals to determine whether to listen for data or whether to recordMenuItem data
     private boolean runBlue = false;
     private boolean recording = false;
 
@@ -76,7 +78,6 @@ public class BluetoothService extends Service {
     /**
      * Constructor which sets the activity to the activity as well as the file stream
      * @param bindingActivity
-     * @param fileStream
      */
     public void init(Activity bindingActivity) {
         connectActivity = bindingActivity;
@@ -87,19 +88,20 @@ public class BluetoothService extends Service {
      * Find the device and return true/false based on whether the device is found
      * @return
      */
-    public boolean findDevice() {
+    public List<BluetoothDevice> findDevice() {
+        List<BluetoothDevice> deviceList = new ArrayList<>();
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(mBluetoothAdapter == null)
         {
             Toast.makeText(this, "No Bluetooth Adapter Available", Toast.LENGTH_SHORT).show();
-            return false;
+            return null;
         }
 
         if(!mBluetoothAdapter.isEnabled())
         {
             Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             connectActivity.startActivityForResult(enableBluetooth, 0);
-            return false;
+            return null;
         }
 
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
@@ -107,28 +109,34 @@ public class BluetoothService extends Service {
         {
             for(BluetoothDevice device : pairedDevices)
             {
-                if(device.getName().equals(DeviceName))
-                {
-                    mmDevice = device;
-                    Toast.makeText(this, "Bluetooth Device Found", Toast.LENGTH_SHORT).show();
-                    return true;
-                }
+                deviceList.add(device);
             }
+            return deviceList;
         }
         Toast.makeText(this, "Bluetooth Device Not Found", Toast.LENGTH_SHORT).show();
-        return false;
+        return null;
+    }
+
+    /**
+     * Set the services's device
+     * @param device
+     */
+    public void setDevice(BluetoothDevice device) {
+        mmDevice = device;
+        Toast.makeText(this, "Device Set (" + mmDevice.getName() + ")", Toast.LENGTH_SHORT).show();
     }
 
     /**
      * Connect to bluetooth device
      */
-    public void connectDevice() {
+    public boolean connectDevice() {
         try {
             mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
             mmSocket.connect();
             mmOutputStream = mmSocket.getOutputStream();
             mmInputStream = mmSocket.getInputStream();
             Toast.makeText(this, "Bluetooth Device Connected", Toast.LENGTH_SHORT).show();
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
             // Unable to connect; close the socket and return.
@@ -138,9 +146,13 @@ public class BluetoothService extends Service {
             } catch (IOException closeException) {
                 Toast.makeText(this, "Could Not Close Socket!", Toast.LENGTH_SHORT).show();
             }
+            return false;
         }
     }
 
+    /**
+     * Disconnect the bluetooth device
+     */
     public void disconnectDevice() {
         try {
             mmOutputStream.close();
@@ -197,11 +209,21 @@ public class BluetoothService extends Service {
     }
 
     /**
+     * Set the file output stream for writing to file
+     * @param fileStream
+     */
+    public void setFileStream(FileOutputStream fileStream) {
+        this.fileStream = fileStream;
+    }
+
+    /**
      * Method to turn recording on or off
      * @param onOff
      */
     public void setRecording(boolean onOff) {
         recording = onOff;
+        if (recording) Toast.makeText(this, "Started Recording", Toast.LENGTH_SHORT).show();
+        else Toast.makeText(this, "Stopped Recording", Toast.LENGTH_SHORT).show();
     }
 
     /**

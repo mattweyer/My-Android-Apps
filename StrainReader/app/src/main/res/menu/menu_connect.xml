@@ -3,8 +3,22 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     tools:Context=".ConnectActivity">
-    <item android:id="@+id/settings"
-        android:title="@string/settings">
+    <item android:id="@+id/showPlot"
+        android:title="@string/show_plot"
+        android:icon="@drawable/ic_show_chart_black_24dp"
+        app:showAsAction="ifRoom">
     </item>
 
+    <item android:id="@+id/settings"
+        android:title="@string/change_freq"
+        android:icon="@drawable/ic_settings_black_24dp"
+        app:showAsAction="ifRoom">
+        <menu>
+            <item android:id="@+id/changeFrequency"
+                android:title="@string/change_freq" />
+            <item android:id="@+id/record"
+                android:title="@string/recording"
+                android:checkable="true" />
+        </menu>
+    </item>
 </menu>
