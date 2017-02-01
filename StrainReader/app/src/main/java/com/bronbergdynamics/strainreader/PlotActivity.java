@@ -11,9 +11,11 @@ import android.os.Bundle;
 
 import com.androidplot.Plot;
 import com.androidplot.xy.LineAndPointFormatter;
+import com.androidplot.xy.XYGraphWidget;
 import com.androidplot.xy.XYPlot;
 import com.androidplot.xy.XYSeries;
 
+import java.text.DecimalFormat;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Observable;
@@ -122,10 +124,13 @@ public class PlotActivity extends AppCompatActivity {
             data.addObserver(plotUpdater);
 
             // uncomment this line to freeze the range boundaries:
-            //dynamicPlot.setRangeBoundaries(-350, 350, BoundaryMode.FIXED);
+            //dynamicPlot.setRangeBoundaries(-35000, 35000, BoundaryMode.FIXED);
 
-            // axes labels
-            dynamicPlot.setRangeLabel("Strain");
+            // style things
+            dynamicPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.LEFT).
+                    setFormat(new DecimalFormat("#"));
+            dynamicPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.BOTTOM).getPaint().setColor(Color.TRANSPARENT);
+            dynamicPlot.setPlotPaddingLeft(100);
         }
 
         public void start() {
