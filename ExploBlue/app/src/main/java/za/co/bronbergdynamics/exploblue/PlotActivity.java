@@ -17,6 +17,7 @@ import com.androidplot.xy.XYSeries;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Observable;
@@ -39,9 +40,15 @@ public class PlotActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_plot);
 
+        // open the file
         filename = getIntent().getStringExtra("filename");
-
         dir = new File(Environment.getExternalStorageDirectory() + "/StrainData");
+        file = new File(dir, filename);
+        try {
+            fileReader = new FileInputStream(file);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
 
         plot = (XYPlot)findViewById(R.id.dynamicXYPlot);
         mPlotter = new Plotter(plot);
